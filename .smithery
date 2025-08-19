@@ -1,0 +1,24 @@
+{
+  "name": "jama-abstract-mcp",
+  "description": "JAMA Network makalelerinden görsel özet PowerPoint dosyaları oluşturan MCP servisi",
+  "version": "1.0.0",
+  "runtime": "python3.9",
+  "entrypoint": "server.py",
+  "requirements": "requirements.txt",
+  "environment": {
+    "PYTHONPATH": ".",
+    "PYTHONUNBUFFERED": "1"
+  },
+  "files": [
+    "app.py",
+    "server.py",
+    "templates/",
+    "icons/"
+  ],
+  "exclude": [
+    "outputs/",
+    "*.pptx",
+    "*.json",
+    "test_*.py"
+  ]
+}

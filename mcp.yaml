@@ -1,0 +1,117 @@
+name: jama-abstract-mcp-v2
+version: "1.0.0"
+description: "JAMA Network makale URL'sinden görsel özet içeren bir PowerPoint dosyası oluşturur."
+
+server:
+  command: python
+  args: ["-m", "server"]
+  env:
+    PYTHONPATH: "."
+    PYTHONUNBUFFERED: "1"
+
+tools:
+  - name: scrape_jama_article
+    description: "Bir JAMA Network Open makale URL'sinden makale verilerini çeker ve yapılandırılmış formatta döndürür."
+    inputSchema:
+      type: object
+      properties:
+        url:
+          type: string
+          description: "Veri çekilecek JAMA Network makalesinin tam URL'si"
+          pattern: "^https://jamanetwork\\.com/.*"
+      required: ["url"]
+    outputSchema:
+      type: object
+      properties:
+        result:
+          type: string
+          description: "İşlem sonucu mesajı"
+        data:
+          type: object
+          description: "Çekilen makale verileri"
+          properties:
+            url:
+              type: string
+              description: "Makale URL'si"
+            title:
+              type: string
+              description: "Makale başlığı"
+            va:
+              type: object
+              description: "Görsel özet verileri"
+              properties:
+                the_study:
+                  type: object
+                  properties:
+                    participants:
+                      type: string
+                      description: "Katılımcı bilgileri"
+                    intervention:
+                      type: string
+                      description: "Müdahale bilgileri"
+                    comparator:
+                      type: string
+                      description: "Karşılaştırma grubu"
+                    primary_outcome:
+                      type: string
+                      description: "Birincil sonuç"
+                    settings_locations:
+                      type: string
+                      description: "Ayar ve konum bilgileri"
+                findings:
+                  type: object
+                  properties:
+                    summary:
+                      type: string
+                      description: "Bulgular özeti"
+                    key_numbers:
+                      type: array
+                      items:
+                        type: string
+                      description: "Anahtar sayılar"
+
+  - name: create_powerpoint
+    description: "Çekilen makale verilerini kullanarak görsel özet içeren bir PowerPoint (PPTX) dosyası oluşturur."
+    inputSchema:
+      type: object
+      properties:
+        data:
+          type: object
+          description: "scrape_jama_article tool'undan dönen veri objesi"
+          properties:
+            url:
+              type: string
+            title:
+              type: string
+            va:
+              type: object
+        output_filename:
+          type: string
+          description: "Çıktı dosyasının adı (opsiyonel, varsayılan: visual_abstract.pptx)"
+        github_repo:
+          type: string
+          description: "Yükleme yapılacak GitHub reposu. Biçim: kullanici/repoadi (opsiyonel)"
+        github_token:
+          type: string
+          description: "Repoya yazma izni olan Personal Access Token (opsiyonel)"
+      required: ["data"]
+    outputSchema:
+      type: object
+      properties:
+        result:
+          type: string
+          description: "İşlem özeti (başarılı/başarısız mesajı)"
+        output_path:
+          type: string
+          description: "Yerelde oluşturulan PPTX yolu"
+        download_url:
+          type: string
+          description: "Release'e yüklendiyse herkese açık indirme linki"
+
+install:
+  pip:
+    - fastmcp>=0.9.0
+    - requests>=2.31.0
+    - beautifulsoup4>=4.12.0
+    - lxml>=4.9.0
+    - python-pptx>=0.6.21
