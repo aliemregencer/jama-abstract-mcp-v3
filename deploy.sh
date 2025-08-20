@@ -14,23 +14,32 @@ if ! command -v smithery &> /dev/null; then
 fi
 
 # Check if logged in to Smithery
-if ! smithery auth status &> /dev/null; then
+if ! smithery list servers &> /dev/null; then
     echo "🔐 Please login to Smithery first:"
-    echo "   smithery auth login"
+    echo "   smithery login"
+    echo "   Get your API key from: https://smithery.ai/account/api-keys"
     exit 1
 fi
 
-# Build and deploy
-echo "📦 Building and deploying to Smithery..."
+# Build the MCP server
+echo "🔨 Building MCP server..."
+if smithery build server.py; then
+    echo "✅ Build completed successfully!"
+else
+    echo "❌ Build failed"
+    exit 1
+fi
 
-# Deploy using smithery.yaml configuration
-smithery deploy --config smithery.yaml
+# Run the server (this will deploy it to Smithery)
+echo "🚀 Deploying to Smithery..."
+echo "Starting server with tunnel..."
+smithery dev server.py
 
 echo "✅ Deployment completed successfully!"
 echo ""
-echo "🔗 Your MCP server is now available on Smithery"
-echo "📋 You can monitor it using: smithery status"
-echo "📊 View logs using: smithery logs"
+echo "🔗 Your MCP server is now running on Smithery!"
+echo "📋 You can monitor it using: smithery list servers"
+echo "🔧 To stop the server, press Ctrl+C"
 echo ""
 echo "🎯 To use this MCP server, add it to your MCP client configuration:"
 echo "   - name: jama-abstract-generator"

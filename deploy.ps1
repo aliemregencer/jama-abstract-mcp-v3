@@ -14,38 +14,47 @@ try {
 
 # Check if logged in to Smithery
 try {
-    $status = smithery auth status 2>&1
+    $status = smithery list servers 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "Not logged in"
     }
     Write-Host "✅ Logged in to Smithery" -ForegroundColor Green
 } catch {
     Write-Host "🔐 Please login to Smithery first:" -ForegroundColor Yellow
-    Write-Host "   smithery auth login" -ForegroundColor Yellow
+    Write-Host "   smithery login" -ForegroundColor Yellow
+    Write-Host "   Get your API key from: https://smithery.ai/account/api-keys" -ForegroundColor Yellow
     exit 1
 }
 
-# Build and deploy
-Write-Host "📦 Building and deploying to Smithery..." -ForegroundColor Green
-
-# Deploy using smithery.yaml configuration
+# Build the MCP server using the config file
+Write-Host "🔨 Building MCP server..." -ForegroundColor Green
 try {
-    smithery deploy --config smithery.yaml
+    smithery build smithery.config.js
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ Deployment completed successfully!" -ForegroundColor Green
+        Write-Host "✅ Build completed successfully!" -ForegroundColor Green
     } else {
-        Write-Host "❌ Deployment failed" -ForegroundColor Red
+        Write-Host "❌ Build failed" -ForegroundColor Red
         exit 1
     }
+} catch {
+    Write-Host "❌ Build failed: $_" -ForegroundColor Red
+    exit 1
+}
+
+# Run the server (this will deploy it to Smithery)
+Write-Host "🚀 Deploying to Smithery..." -ForegroundColor Green
+try {
+    Write-Host "Starting server with tunnel..." -ForegroundColor Yellow
+    smithery dev smithery.config.js
 } catch {
     Write-Host "❌ Deployment failed: $_" -ForegroundColor Red
     exit 1
 }
 
 Write-Host ""
-Write-Host "🔗 Your MCP server is now available on Smithery" -ForegroundColor Cyan
-Write-Host "📋 You can monitor it using: smithery status" -ForegroundColor Cyan
-Write-Host "📊 View logs using: smithery logs" -ForegroundColor Cyan
+Write-Host "🔗 Your MCP server is now running on Smithery!" -ForegroundColor Cyan
+Write-Host "📋 You can monitor it using: smithery list servers" -ForegroundColor Cyan
+Write-Host "🔧 To stop the server, press Ctrl+C" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "🎯 To use this MCP server, add it to your MCP client configuration:" -ForegroundColor Yellow
 Write-Host "   - name: jama-abstract-generator" -ForegroundColor White

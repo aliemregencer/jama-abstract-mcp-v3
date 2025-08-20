@@ -3,25 +3,13 @@ from mcp.server.fastmcp import FastMCP
 from app import scrape_url, render_to_pptx, upload_to_github_release
 import os
 import logging
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create FastAPI app for health checks
-app = FastAPI(title="JAMA Abstract Generator MCP Server")
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for Smithery"""
-    return JSONResponse(
-        status_code=200,
-        content={"status": "healthy", "service": "jama-abstract-generator"}
-    )
-
-mcp = FastMCP("jama-abstract-generator", app=app)
+# Create MCP server
+mcp = FastMCP("jama-abstract-generator")
 
 @mcp.tool()
 async def scrape_jama_article(url: str) -> dict:
