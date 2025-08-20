@@ -3,10 +3,40 @@ from mcp.server.fastmcp import FastMCP
 from app import scrape_url, render_to_pptx, upload_to_github_release
 import os
 import logging
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Simple HTTP health check server
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            response = {
+                "status": "healthy",
+                "service": "jama-abstract-generator",
+                "tools": ["scrape_jama_article", "create_powerpoint"]
+            }
+            self.wfile.write(json.dumps(response).encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b"Not Found")
+
+def start_health_server():
+    """Start HTTP health check server in a separate thread"""
+    try:
+        server = HTTPServer(('0.0.0.0', 8000), HealthCheckHandler)
+        logger.info("Health check server started on port 8000")
+        server.serve_forever()
+    except Exception as e:
+        logger.error(f"Health server error: {e}")
 
 # Create MCP server
 mcp = FastMCP("jama-abstract-generator")
@@ -92,4 +122,10 @@ async def create_powerpoint(
 
 if __name__ == "__main__":
     logger.info("Starting JAMA Abstract Generator MCP Server...")
+    
+    # Start health check server in background thread
+    health_thread = threading.Thread(target=start_health_server, daemon=True)
+    health_thread.start()
+    
+    # Start MCP server
     mcp.run()
