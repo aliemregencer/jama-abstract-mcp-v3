@@ -119,56 +119,59 @@ def _pull_primary_outcome(moam: str, backup_texts: str = "") -> str:
     return _clean(moam)
 
 def scrape_url(url: str) -> dict:
-    r = requests.get(url, headers={"User-Agent":"Mozilla/5.0","Accept-Language":"en-US,en;q=0.9"}, timeout=25)
-    r.raise_for_status()
-    soup = BeautifulSoup(r.text, "lxml")
+    try:
+        r = requests.get(url, headers={"User-Agent":"Mozilla/5.0","Accept-Language":"en-US,en;q=0.9"}, timeout=25)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "lxml")
 
-    title = ""
-    h1 = soup.find("h1")
-    if h1: title = _clean(h1.get_text(" ", strip=True))
-    if not title:
-        og = soup.find("meta", attrs={"property":"og:title"})
-        if og and og.get("content"): title = _clean(og["content"])
-    if not title:
-        ct = soup.find("meta", attrs={"name":"citation_title"})
-        if ct and ct.get("content"): title = _clean(ct["content"])
+        title = ""
+        h1 = soup.find("h1")
+        if h1: title = _clean(h1.get_text(" ", strip=True))
+        if not title:
+            og = soup.find("meta", attrs={"property":"og:title"})
+            if og and og.get("content"): title = _clean(og["content"])
+        if not title:
+            ct = soup.find("meta", attrs={"name":"citation_title"})
+            if ct and ct.get("content"): title = _clean(ct["content"])
 
-    secs = _parse_abstract_dom(soup) or _parse_abstract_meta(soup)
-    kp = _parse_key_points(soup)
+        secs = _parse_abstract_dom(soup) or _parse_abstract_meta(soup)
+        kp = _parse_key_points(soup)
 
-    participants = secs.get("dsp","")
-    intervention = secs.get("interventions","")
-    moam_text    = secs.get("moam","")
-    results      = secs.get("results","")
-    importance   = secs.get("importance","")
-    objective    = secs.get("objective","")
-    conclusions  = secs.get("conclusions","") or secs.get("meaning","")
+        participants = secs.get("dsp","")
+        intervention = secs.get("interventions","")
+        moam_text    = secs.get("moam","")
+        results      = secs.get("results","")
+        importance   = secs.get("importance","")
+        objective    = secs.get("objective","")
+        conclusions  = secs.get("conclusions","") or secs.get("meaning","")
 
-    before       = kp["question"]  or importance
-    findings_sum = kp["findings"]  or results
-    implications = kp["meaning"]   or conclusions
+        before       = kp["question"]  or importance
+        findings_sum = kp["findings"]  or results
+        implications = kp["meaning"]   or conclusions
 
-    comparator   = _pull_comparator(intervention) or _pull_comparator(participants)
-    settings_locs= _pull_settings_locations(secs)
-    primary_out  = _pull_primary_outcome(moam_text, participants + " " + intervention)
+        comparator   = _pull_comparator(intervention) or _pull_comparator(participants)
+        settings_locs= _pull_settings_locations(secs)
+        primary_out  = _pull_primary_outcome(moam_text, participants + " " + intervention)
 
-    return {
-        "url": url,
-        "title": title,
-        "va": {
-            "the_study": {
-                "participants": participants,
-                "intervention": intervention,
-                "comparator": comparator,
-                "primary_outcome": primary_out,
-                "settings_locations": settings_locs
-            },
-            "findings": {
-                "summary": findings_sum,
-                "key_numbers": []
+        return {
+            "url": url,
+            "title": title,
+            "va": {
+                "the_study": {
+                    "participants": participants,
+                    "intervention": intervention,
+                    "comparator": comparator,
+                    "primary_outcome": primary_out,
+                    "settings_locations": settings_locs
+                },
+                "findings": {
+                    "summary": findings_sum,
+                    "key_numbers": []
+                }
             }
         }
-    }
+    except Exception as e:
+        raise Exception(f"URL scraping failed: {str(e)}")
 
 # -------------------- PPTX render --------------------
 def _find_shape(slide, name):
@@ -190,37 +193,44 @@ def _first_sentence(t: str) -> str:
     return re.split(r"(?<=[.!?])\s+", t, maxsplit=1)[0].strip()
 
 def render_to_pptx(data: dict, template_path: str, output_path: str) -> str:
-    va = data.get("va", {})
-    ts = va.get("the_study", {})
-    fd = va.get("findings", {})
+    try:
+        va = data.get("va", {})
+        ts = va.get("the_study", {})
+        fd = va.get("findings", {})
 
-    prs = Presentation(template_path)
-    slide = prs.slides[0]
+        # Check if template exists
+        if not os.path.exists(template_path):
+            raise FileNotFoundError(f"Template file not found: {template_path}")
 
-    _set_text(_find_shape(slide,"title"), data.get("title",""), 22)
-    _set_text(_find_shape(slide,"footer_citation"), data.get("url",""), 10)
+        prs = Presentation(template_path)
+        slide = prs.slides[0]
 
-    pop = ts.get("participants","")
-    _set_text(_find_shape(slide,"population_subtitle"), _first_sentence(pop), 16)
-    _set_text(_find_shape(slide,"population_description"), pop, 14)
+        _set_text(_find_shape(slide,"title"), data.get("title",""), 22)
+        _set_text(_find_shape(slide,"footer_citation"), data.get("url",""), 10)
 
-    inter = ts.get("intervention","")
-    comp  = ts.get("comparator","")
-    inter_sub = f"Intervention vs {comp}" if comp else _first_sentence(inter)
-    _set_text(_find_shape(slide,"intervention_subtitle"), inter_sub, 16)
-    _set_text(_find_shape(slide,"intervention_description"), inter, 14)
+        pop = ts.get("participants","")
+        _set_text(_find_shape(slide,"population_subtitle"), _first_sentence(pop), 16)
+        _set_text(_find_shape(slide,"population_description"), pop, 14)
 
-    _set_text(_find_shape(slide,"settings_locations_description"), ts.get("settings_locations",""), 14)
-    _set_text(_find_shape(slide,"primary_outcome_description"), ts.get("primary_outcome",""), 14)
+        inter = ts.get("intervention","")
+        comp  = ts.get("comparator","")
+        inter_sub = f"Intervention vs {comp}" if comp else _first_sentence(inter)
+        _set_text(_find_shape(slide,"intervention_subtitle"), inter_sub, 16)
+        _set_text(_find_shape(slide,"intervention_description"), inter, 14)
 
-    summary = fd.get("summary","")
-    _set_text(_find_shape(slide,"findings_description_1"), _first_sentence(summary), 14)
-    rest = re.split(r"(?<=[.!?])\s+", (summary or "").strip(), maxsplit=1)
-    _set_text(_find_shape(slide,"findings_description_2"), rest[1].strip() if len(rest)>1 else "", 14)
+        _set_text(_find_shape(slide,"settings_locations_description"), ts.get("settings_locations",""), 14)
+        _set_text(_find_shape(slide,"primary_outcome_description"), ts.get("primary_outcome",""), 14)
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    prs.save(output_path)
-    return output_path
+        summary = fd.get("summary","")
+        _set_text(_find_shape(slide,"findings_description_1"), _first_sentence(summary), 14)
+        rest = re.split(r"(?<=[.!?])\s+", (summary or "").strip(), maxsplit=1)
+        _set_text(_find_shape(slide,"findings_description_2"), rest[1].strip() if len(rest)>1 else "", 14)
+
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        prs.save(output_path)
+        return output_path
+    except Exception as e:
+        raise Exception(f"PowerPoint creation failed: {str(e)}")
 
 # -------------------- GitHub upload --------------------
 def upload_to_github_release(

@@ -1,4 +1,4 @@
-name: jama-abstract-mcp-v2
+name: jama-abstract-generator
 version: "1.0.0"
 description: "JAMA Network makale URL'sinden görsel özet içeren bir PowerPoint dosyası oluşturur."
 
@@ -8,6 +8,8 @@ server:
   env:
     PYTHONPATH: "."
     PYTHONUNBUFFERED: "1"
+    JAMA_TEMPLATE: "templates/abstract.pptx"
+    OUTPUT_DIR: "outputs"
 
 tools:
   - name: scrape_jama_article
@@ -60,6 +62,7 @@ tools:
                       description: "Ayar ve konum bilgileri"
                 findings:
                   type: object
+                  description: "Bulgular özeti"
                   properties:
                     summary:
                       type: string
@@ -112,6 +115,7 @@ install:
   pip:
     - fastmcp>=0.9.0
     - requests>=2.31.0
-    - beautifulsoup4>=4.12.0
-    - lxml>=4.9.0
+    - beautifulsoup4>=4.12.3
+    - lxml>=5.2.2
     - python-pptx>=0.6.21
+    - aiofiles>=23.2.1
