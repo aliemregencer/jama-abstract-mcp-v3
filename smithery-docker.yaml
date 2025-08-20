@@ -1,0 +1,45 @@
+name: jama-abstract-generator
+description: JAMA Network makale URL'sinden görsel özet içeren PowerPoint dosyası oluşturan MCP server
+
+build:
+  context: .
+  dockerfile: Dockerfile
+
+deploy:
+  replicas: 1
+  resources:
+    cpu: 1000m
+    memory: 2Gi
+  
+  env:
+    - PYTHONPATH=/app
+    - PYTHONUNBUFFERED=1
+    - JAMA_TEMPLATE=templates/abstract.pptx
+    - OUTPUT_DIR=outputs
+  
+  ports:
+    - containerPort: 8000
+      protocol: TCP
+  
+  healthCheck:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  volumes:
+    - name: outputs
+      mountPath: /app/outputs
+      size: 1Gi
+    - name: templates
+      mountPath: /app/templates
+      size: 100Mi
+
+networking:
+  ingress:
+    - host: jama-abstract-generator.smithery.ai
+      port: 8000
+      protocol: HTTP
